@@ -53,6 +53,30 @@ void bfc_dump_buffer(bfc_compiler* compiler, FILE* fp) {
 }
 
 /*
+ * Get a unique label from the compiler
+ * */
+int bfc_reserve_label(bfc_compiler* compiler) {
+  return compiler->block_id++;
+}
+
+/*
+ * Emit a label for a given id
+ * */
+void bfc_emit_label(bfc_compiler* compiler, int id) {
+  char output_buffer[27];
+  sprintf(output_buffer, "bf_block_%d", id);
+  bfc_emit(compiler, output_buffer);
+}
+
+/*
+ * Emit a label for a given id plus a newline
+ * */
+void bfc_emitln_label(bfc_compiler* compiler, int id) {
+  bfc_emit_label(compiler, id);
+  EMIT("");
+}
+
+/*
  * Codegen a top-level node
  * */
 bool bfc_compile_ast(bfc_compiler* compiler, bfast_node_t* node) {
@@ -172,8 +196,7 @@ bool bfc_compile_node(bfc_compiler* compiler, bfast_node_t* node) {
         // Read a byte from STDIN
         // Unimplemented right now
         case ',': {
-          EMIT("Emitting stdin-read");
-          break;
+          return false;
         }
 
         default: {
@@ -186,22 +209,19 @@ bool bfc_compile_node(bfc_compiler* compiler, bfast_node_t* node) {
     }
 
     case bfast_type_list: {
-
       // Reserve block id's for both the entry and exit label
-      char entry_label_buffer[27], exit_label_buffer[27];
-      sprintf(entry_label_buffer, "bf_block_%d", compiler->block_id++);
-      sprintf(exit_label_buffer, "bf_block_%d", compiler->block_id++);
+      int entry_label = bfc_reserve_label(compiler);
+      int exit_label = bfc_reserve_label(compiler);
 
       // Emit the conditional jump
       EMIT("read bf_calc1, bf_ptr");
       EMIT("cmp bf_calc1, bf_static_zero");
       bfc_emit(compiler, "jz ");
-      EMIT(exit_label_buffer);
-      EMIT("");
+      bfc_emitln_label(compiler, entry_label);
 
-      // Emit the entry label label
+      // Emit the entry label
       bfc_emit(compiler, ".label ");
-      EMIT(entry_label_buffer);
+      bfc_emitln_label(compiler, entry_label);
 
       // Codegen the loops body
       bfast_node_t* cg_node = node->node.list.first;
@@ -211,19 +231,14 @@ bool bfc_compile_node(bfc_compiler* compiler, bfast_node_t* node) {
       }
 
       // Codegen loop repeat code
-      //
-      // check to flags
-      // jz block_end
-      // jmp block_start
-      // .label block_end
       EMIT("read bf_calc1, bf_ptr");
       EMIT("cmp bf_calc1, bf_static_zero");
       bfc_emit(compiler, "jz ");
-      EMIT(exit_label_buffer);
+      bfc_emitln_label(compiler, exit_label);
       bfc_emit(compiler, "jmp ");
-      EMIT(entry_label_buffer);
+      bfc_emitln_label(compiler, entry_label);
       bfc_emit(compiler, ".label ");
-      EMIT(exit_label_buffer);
+      bfc_emitln_label(compiler, exit_label);
       EMIT("");
 
       break;

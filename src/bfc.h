@@ -26,6 +26,9 @@ void bfc_emit(bfc_compiler* compiler, char* buffer);
 void bfc_emitln(bfc_compiler* compiler, char* buffer);
 bool bfc_compile_ast(bfc_compiler* compiler, bfast_node_t* node);
 bool bfc_compile_node(bfc_compiler* compiler, bfast_node_t* node);
+int bfc_reserve_label(bfc_compiler* compiler);
+void bfc_emit_label(bfc_compiler* compiler, int id);
+void bfc_emitln_label(bfc_compiler* compiler, int id);
 void bfc_dump_buffer(bfc_compiler* compiler, FILE* fp);
 
 #endif
