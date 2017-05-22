@@ -27,6 +27,13 @@ resulting assembly file. Take look at the installation instructions over there.
 | `[`     | Jump to the matching `]` command if the byte at the data pointer is `0`         | ✓      |
 | `]`     | If the current byte is nonzero, jump back to the command after the matching `[` | ✓      |
 
+# Todos
+
+- [ ] Simple peep-hole optimizations
+- [ ] Better error handling
+- [ ] Location information in the AST
+- [ ] `,` command (StackVM needs to be patched for this to work)
+
 # Credits
 
 - [Leonard Schütz @KCreate](https://github.com/KCreate)
