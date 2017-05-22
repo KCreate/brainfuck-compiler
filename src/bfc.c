@@ -192,16 +192,16 @@ bool bfc_compile_node(bfc_compiler* compiler, bfast_node_t* node) {
       sprintf(entry_label_buffer, "bf_block_%d", compiler->block_id++);
       sprintf(exit_label_buffer, "bf_block_%d", compiler->block_id++);
 
-      // Emit the entry label label
-      bfc_emit(compiler, ".label ");
-      EMIT(entry_label_buffer);
-
       // Emit the conditional jump
       EMIT("read bf_calc1, bf_ptr");
       EMIT("cmp bf_calc1, bf_static_zero");
       bfc_emit(compiler, "jz ");
       EMIT(exit_label_buffer);
       EMIT("");
+
+      // Emit the entry label label
+      bfc_emit(compiler, ".label ");
+      EMIT(entry_label_buffer);
 
       // Codegen the loops body
       bfast_node_t* cg_node = node->node.list.first;
