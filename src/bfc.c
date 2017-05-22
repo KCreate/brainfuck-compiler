@@ -108,9 +108,6 @@ bool bfc_compile_ast(bfc_compiler* compiler, bfast_node_t* node) {
   EMIT("loadi bf_static_one, 1");
   EMIT("loadi bf_static_zero, 0");
 
-  // Emit empty line for visual purposes
-  EMIT("");
-
   // Codegen all nodes
   bfast_node_t* cg_node = node->node.list.first;
   while (cg_node) {
@@ -140,9 +137,6 @@ bool bfc_compile_node(bfc_compiler* compiler, bfast_node_t* node) {
           EMIT("mov bf_calc1, bf_ptr");
           EMIT("add bf_calc1, bf_static_one");
           EMIT("mov bf_ptr, bf_calc1");
-
-          // Emit empty line for visual purposes
-          EMIT("");
           break;
         }
 
@@ -151,9 +145,6 @@ bool bfc_compile_node(bfc_compiler* compiler, bfast_node_t* node) {
           EMIT("mov bf_calc1, bf_ptr");
           EMIT("sub bf_calc1, bf_static_one");
           EMIT("mov bf_ptr, bf_calc1");
-
-          // Emit empty line for visual purposes
-          EMIT("");
           break;
         }
 
@@ -162,9 +153,6 @@ bool bfc_compile_node(bfc_compiler* compiler, bfast_node_t* node) {
           EMIT("read bf_calc1, bf_ptr");
           EMIT("add bf_calc1, bf_static_one");
           EMIT("write bf_ptr, bf_calc1");
-
-          // Emit empty line for visual purposes
-          EMIT("");
           break;
         }
 
@@ -173,9 +161,6 @@ bool bfc_compile_node(bfc_compiler* compiler, bfast_node_t* node) {
           EMIT("read bf_calc1, bf_ptr");
           EMIT("sub bf_calc1, bf_static_one");
           EMIT("write bf_ptr, bf_calc1");
-
-          // Emit empty line for visual purposes
-          EMIT("");
           break;
         }
 
@@ -186,10 +171,6 @@ bool bfc_compile_node(bfc_compiler* compiler, bfast_node_t* node) {
           EMIT("push t_size, 1");
           EMIT("push t_syscall, sys_write");
           EMIT("syscall");
-
-          // Emit empty line for visual purposes
-          EMIT("");
-
           break;
         }
 
@@ -200,8 +181,7 @@ bool bfc_compile_node(bfc_compiler* compiler, bfast_node_t* node) {
         }
 
         default: {
-          EMIT("Emitting unknown instruction");
-          break;
+          return false;
         }
       }
 
