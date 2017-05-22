@@ -69,33 +69,35 @@ bool bfc_compile_ast(bfc_compiler* compiler, bfast_node_t* node) {
    * */
 
   // Create definitions for commonly-used registers
-  bfc_emitln(compiler, ".def bf_ptr r0");
-  bfc_emitln(compiler, ".def bf_calc1 r1b");
-  bfc_emitln(compiler, ".def bf_calc2 r2b");
+  EMIT(".def bf_ptr r0");
+  EMIT(".def bf_calc1 r1b");
+  EMIT(".def bf_static_one r2b");
+  EMIT(".def bf_static_zero r3b");
 
   // Reserve space for the cells
-  bfc_emitln(compiler, ".label bf_cells");
-  bfc_emitln(compiler, ".org 30000");
-  bfc_emitln(compiler, ".label entry_addr");
+  EMIT(".label bf_cells");
+  EMIT(".org 30000");
+  EMIT(".label entry_addr");
 
   // Default values for some registers
-  bfc_emitln(compiler, "loadi bf_ptr, 0");
-  bfc_emitln(compiler, "loadi bf_calc2, 1");
+  EMIT("loadi bf_ptr, 0");
+  EMIT("loadi bf_static_one, 1");
+  EMIT("loadi bf_static_zero, 0");
 
   // Emit empty line for visual purposes
-  bfc_emitln(compiler, "");
+  EMIT("");
 
   // Codegen all nodes
   bfast_node_t* cg_node = node->node.list.first;
   while (cg_node) {
-    bfc_compile_node(compiler, cg_node);
+    if (!bfc_compile_node(compiler, cg_node)) return false;
     cg_node = cg_node->next;
   }
 
   // Codegen the program exit
-  bfc_emitln(compiler, "reads 1, bf_ptr");
-  bfc_emitln(compiler, "push t_syscall, sys_exit");
-  bfc_emitln(compiler, "syscall");
+  EMIT("reads 1, bf_ptr");
+  EMIT("push t_syscall, sys_exit");
+  EMIT("syscall");
 
   return true;
 }
@@ -111,64 +113,71 @@ bool bfc_compile_node(bfc_compiler* compiler, bfast_node_t* node) {
 
         // Increment the pointer
         case '>': {
-          bfc_emitln(compiler, "mov bf_calc1, bf_ptr");
-          bfc_emitln(compiler, "add bf_calc1, bf_calc2");
-          bfc_emitln(compiler, "mov bf_ptr, bf_calc1");
+          EMIT("mov bf_calc1, bf_ptr");
+          EMIT("add bf_calc1, bf_static_one");
+          EMIT("mov bf_ptr, bf_calc1");
 
           // Emit empty line for visual purposes
-          bfc_emitln(compiler, "");
+          EMIT("");
           break;
         }
 
         // Decrement the pointer
         case '<': {
-          bfc_emitln(compiler, "mov bf_calc1, bf_ptr");
-          bfc_emitln(compiler, "sub bf_calc1, bf_calc2");
-          bfc_emitln(compiler, "mov bf_ptr, bf_calc1");
+          EMIT("mov bf_calc1, bf_ptr");
+          EMIT("sub bf_calc1, bf_static_one");
+          EMIT("mov bf_ptr, bf_calc1");
 
           // Emit empty line for visual purposes
-          bfc_emitln(compiler, "");
+          EMIT("");
           break;
         }
 
         // Increment the current cell
         case '+': {
-          bfc_emitln(compiler, "read bf_calc1, bf_ptr");
-          bfc_emitln(compiler, "add bf_calc1, bf_calc2");
-          bfc_emitln(compiler, "write bf_ptr, bf_calc1");
+          EMIT("read bf_calc1, bf_ptr");
+          EMIT("add bf_calc1, bf_static_one");
+          EMIT("write bf_ptr, bf_calc1");
 
           // Emit empty line for visual purposes
-          bfc_emitln(compiler, "");
+          EMIT("");
           break;
         }
 
         // Decrement the current cell
         case '-': {
-          bfc_emitln(compiler, "read bf_calc1, bf_ptr");
-          bfc_emitln(compiler, "sub bf_calc1, bf_calc2");
-          bfc_emitln(compiler, "write bf_ptr, bf_calc1");
+          EMIT("read bf_calc1, bf_ptr");
+          EMIT("sub bf_calc1, bf_static_one");
+          EMIT("write bf_ptr, bf_calc1");
 
           // Emit empty line for visual purposes
-          bfc_emitln(compiler, "");
+          EMIT("");
           break;
         }
 
         // Output the ASCII value of the current cell
         case '.': {
-          bfc_emitln(compiler, "reads 1, bf_ptr");
-          bfc_emitln(compiler, "rpush sp");
-          bfc_emitln(compiler, "push t_size, 1");
-          bfc_emitln(compiler, "push t_syscall, sys_write");
-          bfc_emitln(compiler, "syscall");
+          EMIT("reads 1, bf_ptr");
+          EMIT("rpush sp");
+          EMIT("push t_size, 1");
+          EMIT("push t_syscall, sys_write");
+          EMIT("syscall");
 
           // Emit empty line for visual purposes
-          bfc_emitln(compiler, "");
+          EMIT("");
 
           break;
         }
 
+        // Read a byte from STDIN
+        // Unimplemented right now
+        case ',': {
+          EMIT("Emitting stdin-read");
+          break;
+        }
+
         default: {
-          bfc_emitln(compiler, "emitting unknown instruction");
+          EMIT("Emitting unknown instruction");
           break;
         }
       }
@@ -177,12 +186,51 @@ bool bfc_compile_node(bfc_compiler* compiler, bfast_node_t* node) {
     }
 
     case bfast_type_list: {
-      bfc_emitln(compiler, "emitting loop");
+
+      // Reserve block id's for both the entry and exit label
+      char entry_label_buffer[27], exit_label_buffer[27];
+      sprintf(entry_label_buffer, "bf_block_%d", compiler->block_id++);
+      sprintf(exit_label_buffer, "bf_block_%d", compiler->block_id++);
+
+      // Emit the entry label label
+      bfc_emit(compiler, ".label ");
+      EMIT(entry_label_buffer);
+
+      // Emit the conditional jump
+      EMIT("read bf_calc1, bf_ptr");
+      EMIT("cmp bf_calc1, bf_static_zero");
+      bfc_emit(compiler, "jz ");
+      EMIT(exit_label_buffer);
+      EMIT("");
+
+      // Codegen the loops body
+      bfast_node_t* cg_node = node->node.list.first;
+      while (cg_node) {
+        if (!bfc_compile_node(compiler, cg_node)) return false;
+        cg_node = cg_node->next;
+      }
+
+      // Codegen loop repeat code
+      //
+      // check to flags
+      // jz block_end
+      // jmp block_start
+      // .label block_end
+      EMIT("read bf_calc1, bf_ptr");
+      EMIT("cmp bf_calc1, bf_static_zero");
+      bfc_emit(compiler, "jz ");
+      EMIT(exit_label_buffer);
+      bfc_emit(compiler, "jmp ");
+      EMIT(entry_label_buffer);
+      bfc_emit(compiler, ".label ");
+      EMIT(exit_label_buffer);
+      EMIT("");
+
       break;
     }
   }
 
-  return false;
+  return true;
 }
 
 int main(int argc, char** argv) {

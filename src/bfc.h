@@ -11,6 +11,7 @@
 #include "parser.h"
 
 #define BFC_COMPILER_BUFFER_SIZE 8192
+#define EMIT(code) bfc_emitln(compiler, code)
 
 typedef struct {
   int block_id;
