@@ -175,9 +175,11 @@ bool bfc_compile_node(bfc_compiler* compiler, bfast_node_t* node) {
         }
 
         // Read a byte from STDIN
-        // Unimplemented right now
         case ',': {
-          return false;
+          EMIT("push t_register, bf_ptr");
+          EMIT("push t_syscall, sys_read");
+          EMIT("syscall");
+          break;
         }
 
         default: {
